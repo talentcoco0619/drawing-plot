@@ -46,7 +46,7 @@ def draw_dimension_line(ax, P1, P2, L, color='black'):
     ax.text(*mid_point, f'{length:.2f}(units)', ha='center', va='bottom', 
             rotation=np.degrees(theta), rotation_mode='anchor')
 
-def draw_angle_dimension(ax, vertex, P1, P2, radius=7, color='black'):
+def draw_angle_dimension(ax, vertex, P1, P2, color='black'):
     """
     Draws an angle dimension arc and annotates the angle between two lines originating from a vertex.
     """
@@ -59,84 +59,54 @@ def draw_angle_dimension(ax, vertex, P1, P2, radius=7, color='black'):
     distance2 = np.linalg.norm(line2)
     
     # Find the minimum distance and subtract 1
-    min_distance = min(distance1, distance2) - 1
+    arc_distance = min(distance1, distance2) - 1
     
     # Normalize the vectors
     line1_normalized = line1 / distance1
     line2_normalized = line2 / distance2
     
     # Scale the normalized vectors to the new length
-    point1 = vertex + line1_normalized * min_distance
-    point2 = vertex + line2_normalized * min_distance
+    point1 = vertex + line1_normalized * arc_distance
+    point2 = vertex + line2_normalized * arc_distance
+    #label point
+    mid_point = ((point1[0] + point2[0]) / 2, (point1[1] + point2[1]) / 2)
+    
+       
+    angle_rad = np.arctan2(line2[1], line2[0]) - np.arctan2(line1[1], line1[0])
+    angle_deg = np.degrees(angle_rad)
+    if angle_deg < 0:
+        angle_deg += 360    
+    arc_angle = min(angle_deg, 360 - angle_deg)    
+    # Define the angle start
+    start_angle = np.degrees(np.arctan2(line1[1], line1[0]))
+    # Draw the vertex point
+    # ax.plot(*vertex, 'ko', markersize=1)
+    # Draw the lines
+    ax.plot([vertex[0], P1[0]], [vertex[1], P1[1]], color=color)
+    ax.plot([vertex[0], P2[0]], [vertex[1], P2[1]], color=color)  
+    # Annotate the angle in the middle of the arc
+    arc_mid_angle = start_angle + arc_angle / 2  
+    # Rotate the label perpendicular to the angle bisector
+    label_rotation = arc_mid_angle + 90 if arc_angle < 180 else arc_mid_angle - 90
+
+    ax.text(*mid_point, f'{arc_angle:.0f}°(units)', color=color, ha='center', va='center',
+            rotation=label_rotation, rotation_mode='anchor')
+
+    # arrow end points
+    alpha = 0.3
+    point1_a = (point1[0] + alpha * np.cos(arc_angle), point1[1] - alpha * np.sin(arc_angle))
+    point2_a = (point2[0] - alpha * np.cos(arc_angle), point2[1] + alpha * np.sin(arc_angle))
 
     # Create the curved line (arc) with arrows at both ends
-    arc = FancyArrowPatch(point1, point2, 
+    arc = FancyArrowPatch(point1_a, point2_a, 
                           connectionstyle="arc3,rad=0.2", # The radius can be adjusted
                           color=color, 
-                          arrowstyle="<|-|>", # Arrow style with arrowhead at both ends
+                          arrowstyle="<|-|>, head_length=1", # Arrow style with arrowhead at both ends
                           mutation_scale=10, # Size of the arrowhead
                           linewidth=1.5)
     
     # Add the arc to the plot
     ax.add_patch(arc)
-    
-    
-    angle_rad = np.arctan2(line2[1], line2[0]) - np.arctan2(line1[1], line1[0])
-    angle_deg = np.degrees(angle_rad)
-    if angle_deg < 0:
-        angle_deg += 360
-    
-    arc_angle = min(angle_deg, 360 - angle_deg)
-    
-    # Define the angle start
-    start_angle = np.degrees(np.arctan2(line1[1], line1[0]))
-    end_angle = start_angle + arc_angle
-
-    # Draw the vertex point
-    ax.plot(*vertex, 'ko', markersize=1)
-    # Draw the lines
-    ax.plot([vertex[0], P1[0]], [vertex[1], P1[1]], color=color)
-    ax.plot([vertex[0], P2[0]], [vertex[1], P2[1]], color=color)
-    
-    # # Draw the arc
-    # arc = Arc(vertex, 2*radius, 2*radius, angle=0, 
-    #           theta1=start_angle, theta2=end_angle, 
-    #           color=color, linewidth=1.5)
-    # ax.add_patch(arc)
-    
-    # Annotate the angle in the middle of the arc
-    arc_mid_angle = start_angle + arc_angle / 2
-    text_x = vertex[0] + (radius - 0.5) * np.cos(np.radians(arc_mid_angle))
-    text_y = vertex[1] + (radius - 0.5) * np.sin(np.radians(arc_mid_angle))
-    
-    # Rotate the label perpendicular to the angle bisector
-    label_rotation = arc_mid_angle + 90 if arc_angle < 180 else arc_mid_angle - 90
-    
-    # Position the label toward the angle, closer to the vertex
-    ax.text(text_x, text_y, f'{arc_angle:.2f}°', color=color, ha='center', va='center',
-            rotation=label_rotation, rotation_mode='anchor')
-
-
-
-# Given points and leading length
-# P1 = tuple(map(float, input("Enter P1 (x, y): ").split(',')))
-# P2 = tuple(map(float, input("Enter P2 (x, y): ").split(',')))
-# L = float(input("Enter leading length L: "))
-
-# # Plotting
-# fig, ax = plt.subplots(figsize=(18, 8)) #Set the screen size
-# # Remove the axes
-# ax.axis('off')
-
-# ax.set_xlim(-10, 20)
-# ax.set_ylim(-10, 20)
-
-# draw_dimension_line(ax, P1, P2, L)
-
-# draw_angle_dimension(ax, vertex, P1, P2)
-
-# ax.set_aspect('equal')
-# plt.show()
 
 
 # Initialize the plot outside the loop
@@ -145,30 +115,31 @@ fig, ax = plt.subplots(figsize=(18, 8))  # Set the screen size
 ax.set_xlim(-10, 20)
 ax.set_ylim(-10, 20)
 
-# while True:
-#     # Ask the user for the type of drawing
-#     option = input("Enter 'line' to draw a dimension line, 'angle' to draw an angle, or 'quit' to exit: ").lower()
+while True:
+    # Ask the user for the type of drawing
+    option = input("Enter 'line' to draw a dimension line, 'angle' to draw an angle, or 'quit' to exit: ").lower()
     
-#     if option == 'line':
-#         P1 = tuple(map(float, input("Enter P1 (x, y): ").split(',')))
-#         P2 = tuple(map(float, input("Enter P2 (x, y): ").split(',')))
-#         L = float(input("Enter leading length L: "))
+    if option == 'line':
+        P1 = tuple(map(float, input("Enter P1 (x, y): ").split(',')))
+        P2 = tuple(map(float, input("Enter P2 (x, y): ").split(',')))
+        L = float(input("Enter leading length L: "))
         
-#         draw_dimension_line(ax, P1, P2, L)
+        draw_dimension_line(ax, P1, P2, L)
         
-#     elif option == 'angle':
-#         vertex = tuple(map(float, input("Enter vertex (x, y): ").split(',')))
-#         P1 = tuple(map(float, input("Enter P1 (x, y): ").split(',')))
-#         P2 = tuple(map(float, input("Enter P2 (x, y): ").split(',')))
+    elif option == 'angle':
+        vertex = tuple(map(float, input("Enter vertex (x, y): ").split(',')))
+        P1 = tuple(map(float, input("Enter P1 (x, y): ").split(',')))
+        P2 = tuple(map(float, input("Enter P2 (x, y): ").split(',')))
         
-#         draw_angle_dimension(ax, vertex, P1, P2)
+        draw_angle_dimension(ax, vertex, P1, P2)
         
-#     elif option == 'quit':
-#         break
-#     else:
-#         print("Invalid option. Please enter 'line', 'angle', or 'quit'.")
+    elif option == 'quit':
+        break
+    else:
+        print("Invalid option. Please enter 'line', 'angle', or 'quit'.")
 
-draw_angle_dimension(ax, (2, 2), (10, 2), (8, 8))
+# draw_angle_dimension(ax, (2, 2), (10, 2), (5, 8))
+# draw_angle_dimension(ax, (5, 8), (2, 2), (8, 2))
 
 ax.set_aspect('equal')
 plt.show()
